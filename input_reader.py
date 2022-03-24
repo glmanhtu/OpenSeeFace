@@ -1,6 +1,9 @@
+import glob
 import re
 import sys
 import os
+from pathlib import Path
+
 import cv2
 import numpy as np
 import escapi
@@ -27,6 +30,47 @@ class VideoReader():
         return self.cap.read()
     def close(self):
         self.cap.release()
+
+
+def read_image(dataset_path: str, frame_id):
+    image_path = os.path.join(dataset_path, "Images")
+    file_path = os.path.join(image_path, '%s.png' % frame_id)
+    return cv2.imread(file_path, cv2.IMREAD_COLOR)
+
+
+class UNBCReader():
+    def __init__(self, dataset_path):
+        self._dataset = dataset_path
+        frame_labels_path = os.path.join(dataset_path, "Frame_Labels")
+        frame_labels_pattern = os.path.join(frame_labels_path, 'PSPI', '**', '*_facs.txt')
+        list_files = glob.glob(frame_labels_pattern, recursive=True)
+        result = []
+        for file in list_files:
+            frame_id = os.path.join(*Path(file).parts[-3:]).replace('_facs.txt', '')
+            subject, sequence, frame = frame_id.split(os.sep)
+            frame = {'id': frame_id, 'subject': subject}
+            result.append(frame)
+        self.frames = sorted(result, key=lambda i: i['id'])
+        self.current_frame = 0
+
+    def read(self):
+        if self.current_frame == len(self.frames):
+            return False, None
+        item = self.frames[self.current_frame]
+        frame_id = item['id']
+        image = read_image(self._dataset, frame_id)
+        self.current_frame += 1
+        return True, image
+
+    def is_open(self):
+        return True
+
+    def is_ready(self):
+        return True
+
+    def close(self):
+        self.current_frame = 0
+
 
 class EscapiReader(VideoReader):
     def __init__(self, capture, width, height, fps):
@@ -184,6 +228,8 @@ class InputReader():
         try:
             if raw_rgb > 0:
                 self.reader = RawReader(width, height)
+            elif os.path.isdir(capture):
+                self.reader = UNBCReader(capture)
             elif os.path.exists(capture):
                 self.reader = VideoReader(capture)
             elif capture == str(try_int(capture)):
