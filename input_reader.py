@@ -48,7 +48,7 @@ class UNBCReader():
         for file in list_files:
             frame_id = os.path.join(*Path(file).parts[-3:]).replace('_facs.txt', '')
             subject, sequence, frame = frame_id.split(os.sep)
-            frame = {'id': frame_id, 'subject': subject}
+            frame = {'id': frame_id, 'subject': subject, 'sequence': sequence}
             result.append(frame)
         self.frames = sorted(result, key=lambda i: i['id'])
         self.current_frame = 0
@@ -58,9 +58,10 @@ class UNBCReader():
             return False, None
         item = self.frames[self.current_frame]
         frame_id = item['id']
+        sequence = item['sequence']
         image = read_image(self._dataset, frame_id)
         self.current_frame += 1
-        return True, image
+        return True, image, sequence
 
     def is_open(self):
         return True

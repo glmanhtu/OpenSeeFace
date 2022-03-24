@@ -205,6 +205,7 @@ try:
     need_reinit = 0
     failures = 0
     source_name = input_reader.name
+    prev_seq = ''
     while repeat or input_reader.is_open():
         if not input_reader.is_open() or need_reinit == 1:
             input_reader = InputReader(args.capture, args.raw_rgb, args.width, args.height, fps, use_dshowcapture=use_dshowcapture_flag, dcap=dcap)
@@ -218,7 +219,7 @@ try:
             time.sleep(0.02)
             continue
 
-        ret, frame = input_reader.read()
+        ret, frame, seq = input_reader.read()
         if ret and args.mirror_input:
             frame = cv2.flip(frame, 1)
         if not ret:
@@ -243,8 +244,9 @@ try:
         frame_count += 1
         now = time.time()
 
-        if first:
+        if first or prev_seq != seq:
             first = False
+            prev_seq = seq
             height, width, channels = frame.shape
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             tracker = Tracker(width, height, threshold=args.threshold, max_threads=args.max_threads, max_faces=args.faces, discard_after=args.discard_after, scan_every=args.scan_every, silent=False if args.silent == 0 else True, model_type=args.model, model_dir=args.model_dir, no_gaze=False if args.gaze_tracking != 0 and args.model != -1 else True, detection_threshold=args.detection_threshold, use_retinaface=args.scan_retinaface, max_feature_updates=args.max_feature_updates, static_model=True if args.no_3d_adapt == 1 else False, try_hard=args.try_hard == 1)
