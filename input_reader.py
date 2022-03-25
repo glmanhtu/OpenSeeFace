@@ -61,7 +61,7 @@ class UNBCReader():
         sequence = item['sequence']
         image = read_image(self._dataset, frame_id)
         self.current_frame += 1
-        return True, image, sequence
+        return True, image, sequence, frame_id
 
     def is_open(self):
         return True

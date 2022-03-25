@@ -42,6 +42,7 @@ parser.add_argument("--log-data", help="You can set a filename to which tracking
 parser.add_argument("--log-output", help="You can set a filename to console output will be logged here", default="")
 parser.add_argument("--model", type=int, help="This can be used to select the tracking model. Higher numbers are models with better tracking quality, but slower speed, except for model 4, which is wink optimized. Models 1 and 0 tend to be too rigid for expression and blink detection. Model -2 is roughly equivalent to model 1, but faster. Model -3 is between models 0 and -1.", default=3, choices=[-3, -2, -1, 0, 1, 2, 3, 4])
 parser.add_argument("--model-dir", help="This can be used to specify the path to the directory containing the .onnx model files", default=None)
+parser.add_argument("--points_dir", help="Saving points directory", default=None)
 parser.add_argument("--gaze-tracking", type=int, help="When set to 1, gaze tracking is enabled, which makes things slightly slower", default=1)
 parser.add_argument("--face-id-offset", type=int, help="When set, this offset is added to all face ids, which can be useful for mixing tracking data from multiple network sources", default=0)
 parser.add_argument("--repeat-video", type=int, help="When set to 1 and a video file was specified with -c, the tracker will loop the video until interrupted", default=0)
@@ -219,7 +220,7 @@ try:
             time.sleep(0.02)
             continue
 
-        ret, frame, seq = input_reader.read()
+        ret, frame, seq, frame_id = input_reader.read()
         if ret and args.mirror_input:
             frame = cv2.flip(frame, 1)
         if not ret:
@@ -329,6 +330,12 @@ try:
                         x -= 1
                         if not (x < 0 or y < 0 or x >= height or y >= width):
                             frame[int(x), int(y)] = color
+
+                if os.path.isdir(args.points_dir):
+                    point_file = os.path.join(args.points_dir, f'{frame_id}.pts')
+                    os.makedirs(os.path.dirname(point_file), exist_ok=True)
+                    np.save(point_file, f.lms)
+
                 if args.pnp_points != 0 and (args.visualize != 0 or not out is None) and f.rotation is not None:
                     if args.pnp_points > 1:
                         projected = cv2.projectPoints(f.face_3d[0:66], f.rotation, f.translation, tracker.camera, tracker.dist_coeffs)
